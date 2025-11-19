@@ -3,8 +3,9 @@ import { getServerSession } from "next-auth";
 import { prisma } from "@/src/server/db";
 import { sendSlackAlert } from "@/src/server/slack";
 
-export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const session = await getServerSession();
     if (!session?.user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -16,7 +17,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     }
 
     const monitor = await prisma.monitor.findFirst({
-      where: { id: params.id, userId: user.id },
+      where: { id, userId: user.id },
     });
 
     if (!monitor) {

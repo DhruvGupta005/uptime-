@@ -101,11 +101,11 @@ model Check {
 }
 
 model Incident {
-  id         String   @id @default(cuid())
-  monitorId  String
-  startedAt  DateTime @default(now())
-  resolvedAt DateTime?
-  reason     String?
+  id              String    @id @default(cuid())
+  monitorId       String
+  startedAt       DateTime  @default(now())
+  resolvedAt      DateTime?
+  reason          String?
   lastAlertSentAt DateTime?
 
   monitor Monitor @relation(fields: [monitorId], references: [id], onDelete: Cascade)
@@ -115,20 +115,20 @@ model Incident {
 }
 
 model Alert {
-  id         String   @id @default(cuid())
+  id         String    @id @default(cuid())
   monitorId  String
   incidentId String?
-  type       String   // "down", "recovery", "periodic"
-  status     String   // "sent", "failed"
-  message    String?  @db.Text
-  sentAt     DateTime @default(now())
-  error      String?  @db.Text
+  type       String    // "periodic" | "down" | "recovery"
+  status     String    // "sent" | "failed"
+  message    String    @db.Text
+  sentAt     DateTime
+  error      String?   @db.Text
+  createdAt  DateTime  @default(now())
 
-  monitor Monitor @relation(fields: [monitorId], references: [id], onDelete: Cascade)
-  incident Incident? @relation(fields: [incidentId], references: [id], onDelete: Cascade)
+  monitor  Monitor   @relation(fields: [monitorId], references: [id], onDelete: Cascade)
+  incident Incident? @relation(fields: [incidentId], references: [id], onDelete: SetNull)
 
   @@index([monitorId, sentAt])
-  @@index([incidentId])
 }
 
 

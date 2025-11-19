@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { prisma } from "@/src/server/db";
 
-export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const session = await getServerSession();
     if (!session?.user?.email) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -15,7 +16,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     }
 
     const monitor = await prisma.monitor.findFirst({
-      where: { id: params.id, userId: user.id },
+      where: { id, userId: user.id },
     });
 
     if (!monitor) {
@@ -29,7 +30,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
     const [items, total] = await Promise.all([
       prisma.alert.findMany({
-        where: { monitorId: params.id },
+        where: { monitorId: id },
         orderBy: { sentAt: "desc" },
         skip,
         take: pageSize,
@@ -43,7 +44,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
           },
         },
       }),
-      prisma.alert.count({ where: { monitorId: params.id } }),
+      prisma.alert.count({ where: { monitorId: id } }),
     ]);
 
     return NextResponse.json({ items, total, page, pageSize });
