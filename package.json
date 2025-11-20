@@ -11,7 +11,8 @@
     "prisma:migrate": "prisma migrate dev --name init",
     "test": "vitest",
     "test:ui": "vitest --ui",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "postinstall": "npx prisma generate"
   },
   "dependencies": {
     "@next-auth/prisma-adapter": "^1.0.7",
