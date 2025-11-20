@@ -13,9 +13,33 @@ export async function GET(req: NextRequest) {
     const page = Number(url.searchParams.get("page") || 1);
     const pageSize = Number(url.searchParams.get("pageSize") || 20);
     const skip = (page - 1) * pageSize;
-    const where = monitorId ? { monitorId } : {};
+    
+    // Security: Only show checks for monitors owned by the user
+    const where = monitorId 
+      ? { 
+          monitorId,
+          monitor: { userId: user.id } // Ensure user owns the monitor
+        }
+      : { 
+          monitor: { userId: user.id } // Only show checks for user's monitors
+        };
+    
     const [items, total] = await Promise.all([
-      prisma.check.findMany({ where, orderBy: { createdAt: "desc" }, skip, take: pageSize }),
+      prisma.check.findMany({ 
+        where, 
+        orderBy: { createdAt: "desc" }, 
+        skip, 
+        take: pageSize,
+        include: {
+          monitor: {
+            select: {
+              id: true,
+              name: true,
+              url: true,
+            },
+          },
+        },
+      }),
       prisma.check.count({ where }),
     ]);
     return NextResponse.json({ items, total, page, pageSize });

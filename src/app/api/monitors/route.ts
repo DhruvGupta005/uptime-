@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
       );
     }
     
-    const createData: any = {
+    const createData = {
       name: parsed.data.name,
       url: parsed.data.url,
       method: parsed.data.method,
@@ -64,20 +64,11 @@ export async function POST(req: NextRequest) {
       headersJson: parsed.data.headersJson || null,
       body: parsed.data.body || null,
       isPaused: parsed.data.isPaused || false,
+      webhookUrl: parsed.data.webhookUrl || null,
       userId: user.id,
     };
     
-    // Add Slack fields if they exist in schema
-    if (parsed.data.slackWebhook !== undefined) {
-      createData.slackWebhook = parsed.data.slackWebhook || null;
-    }
-    if (parsed.data.slackEnabled !== undefined) {
-      createData.slackEnabled = parsed.data.slackEnabled || false;
-    }
-    
-    const created = await prisma.monitor.create({
-      data: createData,
-    });
+    const created = await prisma.monitor.create({ data: createData });
     
     return NextResponse.json(created, { status: 201 });
   } catch (error: any) {

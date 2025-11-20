@@ -74,8 +74,7 @@ model Monitor {
   body         String?    @db.Text
   lastChecked  DateTime?
   isPaused     Boolean    @default(false)
-  slackWebhook String?    @db.Text
-  slackEnabled Boolean    @default(false)
+  webhookUrl   String?    @db.Text
 
   user   User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   checks Check[]
@@ -106,7 +105,6 @@ model Incident {
   startedAt       DateTime  @default(now())
   resolvedAt      DateTime?
   reason          String?
-  lastAlertSentAt DateTime?
 
   monitor Monitor @relation(fields: [monitorId], references: [id], onDelete: Cascade)
   alerts  Alert[]
@@ -118,10 +116,10 @@ model Alert {
   id         String    @id @default(cuid())
   monitorId  String
   incidentId String?
-  type       String    // "periodic" | "down" | "recovery"
+  type       String    // "down" | "recovery"
   status     String    // "sent" | "failed"
   message    String    @db.Text
-  sentAt     DateTime
+  sentAt     DateTime  @default(now())
   error      String?   @db.Text
   createdAt  DateTime  @default(now())
 
@@ -130,5 +128,3 @@ model Alert {
 
   @@index([monitorId, sentAt])
 }
-
-

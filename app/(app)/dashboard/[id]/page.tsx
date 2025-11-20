@@ -63,8 +63,8 @@ export default function MonitorDetailPage() {
         <UptimeHistoryTable monitorId={id} />
       </section>
       <section className="rounded-lg border p-4">
-        <h2 className="mb-4 font-medium">Slack Notifications</h2>
-        <SlackConfig monitorId={id} monitor={data} onUpdate={mutate} />
+        <h2 className="mb-4 font-medium">Alert Configuration</h2>
+        <AlertConfig monitorId={id} monitor={data} onUpdate={mutate} />
       </section>
       <section className="rounded-lg border p-4">
         <h2 className="mb-4 font-medium">Alert History</h2>
@@ -298,11 +298,9 @@ function UptimeHistoryTable({ monitorId }: { monitorId: string }) {
   );
 }
 
-function SlackConfig({ monitorId, monitor, onUpdate }: { monitorId: string; monitor: any; onUpdate: () => void }) {
-  const [slackWebhook, setSlackWebhook] = useState(monitor.slackWebhook || "");
-  const [slackEnabled, setSlackEnabled] = useState(monitor.slackEnabled || false);
+function AlertConfig({ monitorId, monitor, onUpdate }: { monitorId: string; monitor: any; onUpdate: () => void }) {
+  const [webhookUrl, setWebhookUrl] = useState(monitor.webhookUrl || "");
   const [saving, setSaving] = useState(false);
-  const [testing, setTesting] = useState(false);
 
   async function onSave() {
     setSaving(true);
@@ -310,129 +308,50 @@ function SlackConfig({ monitorId, monitor, onUpdate }: { monitorId: string; moni
       const res = await fetch(`/api/monitors/${monitorId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slackWebhook: slackWebhook || null, slackEnabled }),
+        body: JSON.stringify({ webhookUrl: webhookUrl || null }),
       });
       if (res.ok) {
-        toast.success("Slack settings saved");
+        toast.success("Webhook URL saved");
         onUpdate();
       } else {
-        toast.error("Failed to save Slack settings");
+        toast.error("Failed to save webhook URL");
       }
     } finally {
       setSaving(false);
     }
   }
 
-  const [testType, setTestType] = useState<"down" | "recovery" | "periodic">("down");
-
-  async function onTest() {
-    if (!slackWebhook) {
-      toast.error("Please enter a webhook URL first");
-      return;
-    }
-    setTesting(true);
-    try {
-      const res = await fetch(`/api/monitors/${monitorId}/test-slack`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ webhookUrl: slackWebhook, alertType: testType }),
-      });
-      if (res.ok) {
-        toast.success(`Test ${testType} notification sent to Slack!`);
-        // Refresh alert history after a short delay
-        setTimeout(() => {
-          window.dispatchEvent(new Event("focus"));
-        }, 1500);
-      } else {
-        const data = await res.json();
-        toast.error(data.error || "Failed to send test notification");
-      }
-    } finally {
-      setTesting(false);
-    }
-  }
-
   return (
     <div className="space-y-4">
       <div className="text-sm text-zinc-600 dark:text-zinc-400">
-        Get instant notifications in Slack when your monitor goes down or recovers.
+        Configure a webhook URL to receive notifications when this monitor goes down or recovers.
+        The webhook will receive a JSON payload with monitor details.
       </div>
       
       <div className="space-y-3">
         <div>
           <label className="block text-sm font-medium mb-1">
-            Slack Webhook URL
+            Webhook URL (optional)
           </label>
           <input
             type="url"
             className="w-full rounded-md border px-3 py-2 text-sm"
-            placeholder="https://hooks.slack.com/services/YOUR/WEBHOOK/URL"
-            value={slackWebhook}
-            onChange={(e) => setSlackWebhook(e.target.value)}
+            placeholder="https://example.com/webhook"
+            value={webhookUrl}
+            onChange={(e) => setWebhookUrl(e.target.value)}
           />
           <div className="mt-1 text-xs text-zinc-500">
-            Create a webhook in Slack:{" "}
-            <a
-              href="https://api.slack.com/messaging/webhooks"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="underline"
-            >
-              How to create a Slack webhook
-            </a>
+            Leave empty to only log alerts in the database without sending webhooks.
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <input
-            type="checkbox"
-            id="slack-enabled"
-            checked={slackEnabled}
-            onChange={(e) => setSlackEnabled(e.target.checked)}
-            className="rounded"
-          />
-          <label htmlFor="slack-enabled" className="text-sm">
-            Enable Slack notifications
-          </label>
-        </div>
-
-        <div className="space-y-2">
-          <div>
-            <label className="block text-sm font-medium mb-1">
-              Test Alert Type
-            </label>
-            <select
-              className="w-full rounded-md border px-3 py-2 text-sm"
-              value={testType}
-              onChange={(e) => setTestType(e.target.value as "down" | "recovery" | "periodic")}
-            >
-              <option value="down">Down Alert</option>
-              <option value="recovery">Recovery Alert</option>
-              <option value="periodic">Periodic Alert (Still Down)</option>
-            </select>
-            <div className="mt-1 text-xs text-zinc-500">
-              {testType === "down" && "Tests initial website down notification"}
-              {testType === "recovery" && "Tests website recovery notification"}
-              {testType === "periodic" && "Tests periodic alert for ongoing downtime"}
-            </div>
-          </div>
-          <div className="flex gap-2">
-            <button
-              className="rounded-md bg-black px-4 py-2 text-sm text-white dark:bg-white dark:text-black"
-              onClick={onSave}
-              disabled={saving}
-            >
-              {saving ? "Saving..." : "Save Settings"}
-            </button>
-            <button
-              className="rounded-md border px-4 py-2 text-sm"
-              onClick={onTest}
-              disabled={testing || !slackWebhook}
-            >
-              {testing ? "Testing..." : "Test Notification"}
-            </button>
-          </div>
-        </div>
+        <button
+          className="rounded-md bg-black px-4 py-2 text-sm text-white dark:bg-white dark:text-black"
+          onClick={onSave}
+          disabled={saving}
+        >
+          {saving ? "Saving..." : "Save Webhook URL"}
+        </button>
       </div>
     </div>
   );
@@ -441,7 +360,6 @@ function SlackConfig({ monitorId, monitor, onUpdate }: { monitorId: string; moni
 function AlertHistory({ monitorId }: { monitorId: string }) {
   const { data, mutate } = useSWR<{ items: any[] }>(`/api/monitors/${monitorId}/alerts?pageSize=50`, fetcher);
   
-  // Refresh alert history when window gains focus (after test)
   useEffect(() => {
     const handleFocus = () => mutate();
     window.addEventListener("focus", handleFocus);
@@ -457,7 +375,7 @@ function AlertHistory({ monitorId }: { monitorId: string }) {
   if (alerts.length === 0) {
     return (
       <div className="text-sm text-zinc-500 text-center py-8">
-        No alerts sent yet. Alerts will appear here when your monitor goes down or recovers.
+        No alerts yet. Alerts will appear here when your monitor goes down or recovers.
       </div>
     );
   }
@@ -468,8 +386,6 @@ function AlertHistory({ monitorId }: { monitorId: string }) {
         return "Down Alert";
       case "recovery":
         return "Recovery Alert";
-      case "periodic":
-        return "Periodic Alert";
       default:
         return type;
     }
@@ -481,8 +397,6 @@ function AlertHistory({ monitorId }: { monitorId: string }) {
         return "bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200";
       case "recovery":
         return "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200";
-      case "periodic":
-        return "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200";
       default:
         return "bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200";
     }
@@ -491,7 +405,7 @@ function AlertHistory({ monitorId }: { monitorId: string }) {
   return (
     <div className="space-y-3">
       <div className="text-sm text-zinc-600 dark:text-zinc-400 mb-4">
-        View all notifications sent to Slack for this monitor. Alerts are automatically sent when your website goes down or recovers.
+        View all alerts for this monitor. Alerts are automatically created when your monitor goes down or recovers.
       </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm border-collapse">
@@ -548,5 +462,3 @@ function AlertHistory({ monitorId }: { monitorId: string }) {
     </div>
   );
 }
-
-

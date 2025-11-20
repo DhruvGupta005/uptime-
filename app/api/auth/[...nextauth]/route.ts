@@ -26,18 +26,9 @@ const authOptions: NextAuthOptions = {
     },
     async session({ session, token }) {
       if (session.user) {
-        // Extend the default NextAuth session user with our custom fields
-        const user = session.user as typeof session.user & {
-          id?: string;
-          email?: string | null;
-          name?: string | null;
-        };
-
-        user.id = token.id as string;
-        user.email = token.email as string | null;
-        user.name = token.name as string | null;
-
-        session.user = user;
+        (session.user as any).id = token.id as string;
+        session.user.email = token.email as string;
+        session.user.name = token.name as string;
       }
       return session;
     },

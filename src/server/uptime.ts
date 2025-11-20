@@ -66,19 +66,18 @@ export async function runCheckForMonitor(monitorId: string) {
 
     if (!ok) {
       if (!lastIncident || lastIncident.resolvedAt) {
-        // New incident - create and send initial alert
+        // New incident - create and send alert
         const newIncident = await prisma.incident.create({
           data: {
             monitorId: monitor.id,
             reason: error ?? `HTTP ${statusCode}`,
-            lastAlertSentAt: new Date(),
           },
         });
-        
-        // Send Slack alert for new incident
-        if (monitor.slackEnabled && monitor.slackWebhook) {
-          const { sendSlackAlert } = await import("./slack");
-          sendSlackAlert(monitor.slackWebhook, {
+
+        // Send webhook alert if configured
+        if (monitor.webhookUrl) {
+          const { sendWebhookAlert } = await import("./webhook");
+          sendWebhookAlert(monitor.webhookUrl, {
             monitorName: monitor.name,
             monitorUrl: monitor.url,
             monitorId: monitor.id,
@@ -86,50 +85,37 @@ export async function runCheckForMonitor(monitorId: string) {
             reason: error ?? `HTTP ${statusCode}`,
             timestamp: new Date(),
             incidentId: newIncident.id,
-          }).catch((err) => console.error("[Uptime] Slack alert failed:", err));
-        }
-      } else if (lastIncident && !lastIncident.resolvedAt) {
-        // Ongoing incident - send periodic alerts
-        const now = new Date();
-        const incidentDuration = Math.floor((now.getTime() - new Date(lastIncident.startedAt).getTime()) / 1000 / 60);
-        const lastAlertTime = lastIncident.lastAlertSentAt ? new Date(lastIncident.lastAlertSentAt).getTime() : 0;
-        const minutesSinceLastAlert = (now.getTime() - lastAlertTime) / 1000 / 60;
-        
-        // Send periodic alerts every 15 minutes for ongoing incidents
-        if (minutesSinceLastAlert >= 15 && monitor.slackEnabled && monitor.slackWebhook) {
-          await prisma.incident.update({
-            where: { id: lastIncident.id },
-            data: { lastAlertSentAt: now },
-          });
-          
-          const { sendSlackAlert } = await import("./slack");
-          sendSlackAlert(monitor.slackWebhook, {
-            monitorName: monitor.name,
-            monitorUrl: monitor.url,
-            monitorId: monitor.id,
-            status: "down",
-            reason: lastIncident.reason ?? "Service unreachable",
-            timestamp: now,
-            incidentId: lastIncident.id,
-            duration: incidentDuration,
-            isRecurring: true,
-          }).catch((err) => console.error("[Uptime] Periodic Slack alert failed:", err));
+          }).catch((err) => console.error("[Uptime] Webhook alert failed:", err));
+        } else {
+          // Log alert to database even without webhook
+          await prisma.alert.create({
+            data: {
+              monitorId: monitor.id,
+              incidentId: newIncident.id,
+              type: "down",
+              status: "sent",
+              message: `Monitor "${monitor.name}" is DOWN - ${error ?? `HTTP ${statusCode}`}`,
+              sentAt: new Date(),
+            },
+          }).catch((err) => console.error("[Uptime] Failed to log alert:", err));
         }
       }
     } else {
       if (lastIncident && !lastIncident.resolvedAt) {
         const resolvedAt = new Date();
-        const incidentDuration = Math.floor((resolvedAt.getTime() - new Date(lastIncident.startedAt).getTime()) / 1000 / 60);
-        
+        const incidentDuration = Math.floor(
+          (resolvedAt.getTime() - new Date(lastIncident.startedAt).getTime()) / 1000 / 60
+        );
+
         await prisma.incident.update({
           where: { id: lastIncident.id },
-          data: { resolvedAt, lastAlertSentAt: resolvedAt },
+          data: { resolvedAt },
         });
-        
-        // Send Slack alert for recovery
-        if (monitor.slackEnabled && monitor.slackWebhook) {
-          const { sendSlackAlert } = await import("./slack");
-          sendSlackAlert(monitor.slackWebhook, {
+
+        // Send recovery alert if webhook configured
+        if (monitor.webhookUrl) {
+          const { sendWebhookAlert } = await import("./webhook");
+          sendWebhookAlert(monitor.webhookUrl, {
             monitorName: monitor.name,
             monitorUrl: monitor.url,
             monitorId: monitor.id,
@@ -137,7 +123,19 @@ export async function runCheckForMonitor(monitorId: string) {
             timestamp: resolvedAt,
             incidentId: lastIncident.id,
             duration: incidentDuration,
-          }).catch((err) => console.error("[Uptime] Slack recovery alert failed:", err));
+          }).catch((err) => console.error("[Uptime] Recovery webhook alert failed:", err));
+        } else {
+          // Log recovery alert to database even without webhook
+          await prisma.alert.create({
+            data: {
+              monitorId: monitor.id,
+              incidentId: lastIncident.id,
+              type: "recovery",
+              status: "sent",
+              message: `Monitor "${monitor.name}" is UP - Downtime: ${incidentDuration} minutes`,
+              sentAt: resolvedAt,
+            },
+          }).catch((err) => console.error("[Uptime] Failed to log recovery alert:", err));
         }
       }
     }

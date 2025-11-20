@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import DashboardPage from "../../dashboard/page";
+import DashboardPage from "@/app/(app)/dashboard/page";
 
 vi.stubGlobal("fetch", (url: string) => {
   if (url.startsWith("/api/monitors")) {
