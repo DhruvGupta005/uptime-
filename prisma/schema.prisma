@@ -1,11 +1,12 @@
 // Prisma schema for BetterUptime-like app
 generator client {
   provider = "prisma-client-js"
+  engineType    = "binary"
 }
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url      = env("DATABASE_URL")gs
 }
 
 // NextAuth models
