@@ -5,7 +5,6 @@
 .pnp.*
 .yarn/*
 /node_modules
-!node_modules/.prisma
 !.yarn/patches
 !.yarn/plugins
 !.yarn/releases
