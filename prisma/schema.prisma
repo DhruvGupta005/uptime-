@@ -1,6 +1,7 @@
 // Prisma schema for BetterUptime-like app
 generator client {
   provider = "prisma-client-js"
+  engineType    = "binary"
   binaryTargets   = ["native", "rhel-openssl-3.0.x"]
 }
 
