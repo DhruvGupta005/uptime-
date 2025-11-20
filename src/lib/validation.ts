@@ -9,7 +9,6 @@ export const monitorInputSchema = z.object({
   headersJson: z.string().optional().nullable(),
   body: z.string().optional().nullable(),
   isPaused: z.boolean().optional().default(false),
-  webhookUrl: z.string().url().optional().nullable(),
 });
 
 export type MonitorInput = z.infer<typeof monitorInputSchema>;

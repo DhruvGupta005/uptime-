@@ -44,6 +44,13 @@ export async function GET(req: NextRequest) {
     ]);
     return NextResponse.json({ items, total, page, pageSize });
   } catch (error: any) {
+    if (error?.code === "P1001") {
+      console.error("[API] Database connection error:", error?.meta ?? error);
+      return NextResponse.json(
+        { error: "Database is unreachable. Please check DATABASE_URL or DB availability." },
+        { status: 503 }
+      );
+    }
     console.error("[API] Get checks error:", error);
     return NextResponse.json(
       { error: error?.message || "Internal server error" },

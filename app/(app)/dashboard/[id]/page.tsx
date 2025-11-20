@@ -345,13 +345,13 @@ function AlertConfig({ monitorId, monitor, onUpdate }: { monitorId: string; moni
           </div>
         </div>
 
-        <button
-          className="rounded-md bg-black px-4 py-2 text-sm text-white dark:bg-white dark:text-black"
-          onClick={onSave}
-          disabled={saving}
-        >
+            <button
+              className="rounded-md bg-black px-4 py-2 text-sm text-white dark:bg-white dark:text-black"
+              onClick={onSave}
+              disabled={saving}
+            >
           {saving ? "Saving..." : "Save Webhook URL"}
-        </button>
+            </button>
       </div>
     </div>
   );

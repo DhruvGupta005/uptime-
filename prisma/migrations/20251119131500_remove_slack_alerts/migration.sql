@@ -9,3 +9,6 @@ ALTER TABLE "Monitor"
   DROP COLUMN IF EXISTS "slackWebhook";
 
 
+
+
+

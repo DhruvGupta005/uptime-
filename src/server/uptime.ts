@@ -1,6 +1,10 @@
 import axios from "axios";
 import { prisma } from "@/src/server/db";
 
+function isDbConnectionError(error: unknown): boolean {
+  return typeof error === "object" && error !== null && (error as any)?.code === "P1001";
+}
+
 export async function runCheckForMonitor(monitorId: string) {
   try {
     const monitor = await prisma.monitor.findUnique({ where: { id: monitorId } });
@@ -73,7 +77,7 @@ export async function runCheckForMonitor(monitorId: string) {
             reason: error ?? `HTTP ${statusCode}`,
           },
         });
-
+        
         // Send webhook alert if configured
         if (monitor.webhookUrl) {
           const { sendWebhookAlert } = await import("./webhook");
@@ -90,7 +94,7 @@ export async function runCheckForMonitor(monitorId: string) {
           // Log alert to database even without webhook
           await prisma.alert.create({
             data: {
-              monitorId: monitor.id,
+            monitorId: monitor.id,
               incidentId: newIncident.id,
               type: "down",
               status: "sent",
@@ -106,12 +110,12 @@ export async function runCheckForMonitor(monitorId: string) {
         const incidentDuration = Math.floor(
           (resolvedAt.getTime() - new Date(lastIncident.startedAt).getTime()) / 1000 / 60
         );
-
+        
         await prisma.incident.update({
           where: { id: lastIncident.id },
           data: { resolvedAt },
         });
-
+        
         // Send recovery alert if webhook configured
         if (monitor.webhookUrl) {
           const { sendWebhookAlert } = await import("./webhook");
@@ -142,7 +146,11 @@ export async function runCheckForMonitor(monitorId: string) {
 
     return check;
   } catch (error) {
-    console.error(`[Uptime] Error checking monitor ${monitorId}:`, error);
+    if (isDbConnectionError(error)) {
+      console.error("[Uptime] Database connection error while running check:", (error as any)?.meta ?? error);
+    } else {
+      console.error(`[Uptime] Error checking monitor ${monitorId}:`, error);
+    }
     // Don't throw - return null so scheduler continues with other monitors
     return null;
   }
@@ -177,7 +185,11 @@ export async function runDueChecks() {
 
     return { ran: successful, failed };
   } catch (error) {
-    console.error("[Uptime] Error in runDueChecks:", error);
+    if (isDbConnectionError(error)) {
+      console.error("[Uptime] Database connection error in runDueChecks:", (error as any)?.meta ?? error);
+    } else {
+      console.error("[Uptime] Error in runDueChecks:", error);
+    }
     return { ran: 0, error: error instanceof Error ? error.message : "Unknown error" };
   }
 }
