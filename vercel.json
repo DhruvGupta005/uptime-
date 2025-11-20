@@ -1,7 +1,8 @@
 {
     "functions": {
       "src/app/api/**/*.ts": {
-        "excludeFiles": "node_modules/.prisma/**"
+        "excludeFiles": "node_modules/.prisma/**",
+        "includeFiles": "prisma/schema.prisma"
       }
     }
   }
